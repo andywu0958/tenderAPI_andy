@@ -1187,7 +1187,7 @@ exports.plugin = {
 						FROM caseDistress`
 					);
 					caseDetectionIdList = JSON.parse(caseDetectionIdList).filter(id => id != null);
-					// console.log(caseDetectionIdList);
+					//console.log(caseDetectionIdList);
 
 					const sql_CMD = isSub ? ` AND (DistressType = 15 OR (DistressType = 16 AND DistressLevel = 3))` : "";
 					// Step3: 取得缺失列表
@@ -1278,7 +1278,21 @@ exports.plugin = {
 							AND DistressType IN (15, 29, 16, 32, 18, 51, 50, 53, 65, 54, 55, 56, 49, 66, 58)`,
 							[ res_inspectionList.map(l => l.InspectId) ]
 					)
-					// console.log(res_caseList);
+					console.log(`SELECT 
+							DateCollect_At AS dateCollect, 
+							REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( DistressType, '15', '坑洞' ), '29', '縱橫裂縫'), '16', '龜裂'), '32', '車轍'), '18', '隆起與凹陷'), '51', '薄層剝離'), '50', '塊狀裂縫'), '53', "推擠"), '65', '補綻及管線回填'), '54', '冒油'), '55', '波浪狀鋪面'), '56', '車道與路肩分離'), '49', '滑溜裂縫'), '66', '骨材剝落'), '58', '人孔高差') AS distressType, 
+							REPLACE ( REPLACE ( REPLACE ( DistressLevel, '1', '輕' ), '2', '中' ), '3', '重' ) AS distressLevel, 
+							ST_AsWKT(Geom, 'axis-order=long-lat') AS geom, 
+							ST_AsWKT(Wkb_geometry, 'axis-order=long-lat') AS wkb_geometry, 
+							id AS caseDetectionId
+						FROM  
+							caseDetection 
+							LEFT JOIN caseInspection USING(InspectId)
+						WHERE 
+							caseDetection.IsActive = 1 
+							AND caseDetection.DateMark_At IS NULL
+							AND InspectId IN (?) 
+							AND DistressType IN (15, 29, 16, 32, 18, 51, 50, 53, 65, 54, 55, 56, 49, 66, 58)`);
 
 					// Step4: 寫入distress
 					result.total = res_caseList.length;
@@ -1296,10 +1310,10 @@ exports.plugin = {
 
 					if (sqlCMD_list.length != 0) {
 						sqlCMD_list = sqlCMD_list.replace(/,$/, "");
-						// console.log(sqlCMD_list);
+						console.log(sqlCMD_list);
 
 						const result_pg = await request.pg.client.query(`INSERT INTO "qgis"."distress" ( "surveyId", "dateCollect", "distressType", "distressLevel", "geom", "wkb_geometry", "caseDetectionId") VALUES ${sqlCMD_list}`);
-						// console.log(result_pg);
+						console.log(result_pg);
 						result.success = result_pg.rowCount;
 					}
 				}

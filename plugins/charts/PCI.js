@@ -568,7 +568,7 @@ exports.plugin = {
 						SUM(CASE WHEN "PCI_real" >= 25 AND "PCI_real" < 40 THEN 1 ELSE 0 END) AS "veryPoor(25-40)",
 						SUM(CASE WHEN "PCI_real" >= 10 AND "PCI_real" < 25 THEN 1 ELSE 0 END) AS "serious(10-25)",
 						SUM(CASE WHEN "PCI_real" >= 0 AND "PCI_real" < 10 THEN 1 ELSE 0 END) AS "failed(0-10)"
-					FROM "qgis"."${block.tableName}1" AS PCIList
+					FROM "qgis"."${block.tableName}" AS PCIList
 					WHERE "pci_id" IS NOT NULL
 
 					UNION ALL
@@ -581,7 +581,7 @@ exports.plugin = {
 						ROUND(SUM(CASE WHEN "PCI_real" >= 25 AND "PCI_real" < 40 THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 2) AS "veryPoor(25-40)",
 						ROUND(SUM(CASE WHEN "PCI_real" >= 10 AND "PCI_real" < 25 THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 2) AS "serious(10-25)",
 						ROUND(SUM(CASE WHEN "PCI_real" >= 0 AND "PCI_real" < 10 THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 2) AS "failed(0-10)"
-					FROM "qgis"."${block.tableName}1" AS PCIList
+					FROM "qgis"."${block.tableName}" AS PCIList
 					WHERE "pci_id" IS NOT NULL
 				`);
 
@@ -591,7 +591,7 @@ exports.plugin = {
 						SELECT
 							"道路名稱",
 							MAX("PCI_real") AS "PCI_real"
-						FROM "qgis"."${block.tableName}1"
+						FROM "qgis"."${block.tableName}"
 						WHERE "pci_id" IS NOT NULL
 						GROUP BY "道路名稱"
 					)

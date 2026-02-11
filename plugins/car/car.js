@@ -79,30 +79,32 @@ exports.plugin = {
 				let result = [];
 				// NOTE: 三、六標額外讀取
 				if([ 3, 6 ].includes(contractId)) {
-					[ result ] = await request.tendersql.pool.query(
-						`SELECT 
-							SerialNo AS serialno,
-							CoordinateY AS xx,
-							CoordinateX AS yy,
-							Place AS casename, 
-							Direction, 
-							Lane, 
-							DistressType, 
-							DistressLevel AS broketype,
-							DateCreate AS reportTime, 
-							MillingLength AS elength,
-							MillingWidth AS blength,
-							MillingArea,
-							'2' AS reccontrol,
-							ImgZoomIn AS imgfile
-						FROM caseDistress
-						WHERE SurveyId IN (?) AND DateCreate >= ? AND DateCreate < ? AND CaseCenterId = -1`,
-						[ res_TendersGroup.map(survey => survey.surveyId), timeStart, timeEnd ]
-					);
-					
-					result.forEach(caseSpec => {
-						caseSpec.caseType = caseTypeMap[caseSpec.DistressType];
-					})
+					if (res_TendersGroup.length > 0) {
+						[ result ] = await request.tendersql.pool.query(
+							`SELECT 
+								SerialNo AS serialno,
+								CoordinateY AS xx,
+								CoordinateX AS yy,
+								Place AS casename, 
+								Direction, 
+								Lane, 
+								DistressType, 
+								DistressLevel AS broketype,
+								DateCreate AS reportTime, 
+								MillingLength AS elength,
+								MillingWidth AS blength,
+								MillingArea,
+								'2' AS reccontrol,
+								ImgZoomIn AS imgfile
+							FROM caseDistress
+							WHERE SurveyId IN (?) AND DateCreate >= ? AND DateCreate < ? AND CaseCenterId = -1`,
+							[ res_TendersGroup.map(survey => survey.surveyId), timeStart, timeEnd ]
+						);
+						
+						result.forEach(caseSpec => {
+							caseSpec.caseType = caseTypeMap[caseSpec.DistressType];
+						})
+					}
 
 
 				} else {
@@ -173,32 +175,35 @@ exports.plugin = {
 				);
 
 				// 坑洞(臨補)
-				const [ res_hole ] = await request.tendersql.pool.query(
-					`SELECT 
-						SerialNo AS serialno,
-						CaseNo,
-						'坑洞(臨補)' AS type,
-						CoordinateY AS xx,
-						CoordinateX AS yy,
-						Place AS casename, 
-						Direction, 
-						Lane, 
-						DistressType, 
-						DistressLevel AS broketype,
-						DateCreate AS reportTime, 
-						MillingLength AS elength,
-						MillingWidth AS blength,
-						MillingArea,
-						'2' AS reccontrol,
-						ImgZoomIn AS imgfile
-					FROM caseDistress
-					WHERE 
-						DistressType = 15
-						AND SurveyId IN (?) 
-						AND DateCreate >= ? AND DateCreate < ? 
-						AND CaseCenterId = 0`,
-					[ res_TendersGroup.map(survey => survey.surveyId), timeStart, timeEnd ]
-				);
+				let res_hole = [];
+				if (res_TendersGroup.length > 0) {
+					[ res_hole ] = await request.tendersql.pool.query(
+						`SELECT 
+							SerialNo AS serialno,
+							CaseNo,
+							'坑洞(臨補)' AS type,
+							CoordinateY AS xx,
+							CoordinateX AS yy,
+							Place AS casename, 
+							Direction, 
+							Lane, 
+							DistressType, 
+							DistressLevel AS broketype,
+							DateCreate AS reportTime, 
+							MillingLength AS elength,
+							MillingWidth AS blength,
+							MillingArea,
+							'2' AS reccontrol,
+							ImgZoomIn AS imgfile
+						FROM caseDistress
+						WHERE 
+							DistressType = 15
+							AND SurveyId IN (?) 
+							AND DateCreate >= ? AND DateCreate < ? 
+							AND CaseCenterId = 0`,
+						[ res_TendersGroup.map(survey => survey.surveyId), timeStart, timeEnd ]
+					);
+				}
 
 				res_hole.forEach(caseSpec => {
 					caseSpec.caseType = caseTypeMap[caseSpec.DistressType];
@@ -757,52 +762,57 @@ exports.plugin = {
 							${contractId == 99 ? '' : ` AND TendersGroup.contractId = '${contractId}'`}`
 					);
 
-					[ result ] = await request.tendersql.pool.query(
-						`SELECT 
-							SerialNo AS serialno,
-							CaseNo,
-							'坑洞(臨補)' AS type,
-							CoordinateY AS xx,
-							CoordinateX AS yy,
-							Place AS casename, 
-							DistressType, 
-							DistressLevel AS broketype,
-							DateCreate AS reportTime, 
-							MillingLength AS elength,
-							MillingWidth AS blength,
-							MillingArea,
-							'2' AS reccontrol,
-							ImgZoomIn AS imgfile,
-							r.Image AS ImageRestored
-						FROM caseDistress AS d
-						LEFT JOIN caseDistressFlowRestored AS r ON r.DistressId = d.SerialNo
-						WHERE 
-							DistressType = 15 
-							AND SurveyId IN (?) 
-							AND DateCreate >= ? AND DateCreate < ? 
-							AND CaseCenterId = 0
-						ORDER BY DateCreate DESC
-						LIMIT ? OFFSET ?`,
-						[ res_TendersGroup.map(survey => survey.surveyId), timeStart, timeEnd, pageSize, offset ]
-					);
-					
+					if (res_TendersGroup.length > 0) {
+						[ result ] = await request.tendersql.pool.query(
+							`SELECT 
+								SerialNo AS serialno,
+								CaseNo,
+								'坑洞(臨補)' AS type,
+								CoordinateY AS xx,
+								CoordinateX AS yy,
+								Place AS casename, 
+								DistressType, 
+								DistressLevel AS broketype,
+								DateCreate AS reportTime, 
+								MillingLength AS elength,
+								MillingWidth AS blength,
+								MillingArea,
+								'2' AS reccontrol,
+								ImgZoomIn AS imgfile,
+								r.Image AS ImageRestored
+							FROM caseDistress AS d
+							LEFT JOIN caseDistressFlowRestored AS r ON r.DistressId = d.SerialNo
+							WHERE 
+								DistressType = 15 
+								AND SurveyId IN (?) 
+								AND DateCreate >= ? AND DateCreate < ? 
+								AND CaseCenterId = 0
+							ORDER BY DateCreate DESC
+							LIMIT ? OFFSET ?`,
+							[ res_TendersGroup.map(survey => survey.surveyId), timeStart, timeEnd, pageSize, offset ]
+						);
+						
 
-					[[{ total }]] = await request.tendersql.pool.query(
-						`SELECT
-							COUNT(*) AS total
-						FROM caseDistress AS d
-						LEFT JOIN caseDistressFlowRestored AS r ON r.DistressId = d.SerialNo
-						WHERE 
-							DistressType = 15
-							AND SurveyId IN (?) 
-							AND DateCreate >= ? AND DateCreate < ? 
-							AND CaseCenterId = 0`,
-						[ res_TendersGroup.map(survey => survey.surveyId), timeStart, timeEnd ]
-					);
+						[[{ total }]] = await request.tendersql.pool.query(
+							`SELECT
+								COUNT(*) AS total
+							FROM caseDistress AS d
+							LEFT JOIN caseDistressFlowRestored AS r ON r.DistressId = d.SerialNo
+							WHERE 
+								DistressType = 15
+								AND SurveyId IN (?) 
+								AND DateCreate >= ? AND DateCreate < ? 
+								AND CaseCenterId = 0`,
+							[ res_TendersGroup.map(survey => survey.surveyId), timeStart, timeEnd ]
+						);
 
-					result.forEach(caseSpec => {
-						caseSpec.caseType = caseTypeMap[caseSpec.DistressType];
-					});
+						result.forEach(caseSpec => {
+							caseSpec.caseType = caseTypeMap[caseSpec.DistressType];
+						});
+					} else {
+						result = [];
+						total = 0;
+					}
 				} else if (insType == 2) {
 					// NOTE: contractId 與 gteam 的對應
 					const contractMap = { 1: 1, 2: 2, 3: 5, 4: 4, 5: 3, 6: 6 };
