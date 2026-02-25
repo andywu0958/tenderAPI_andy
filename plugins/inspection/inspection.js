@@ -875,6 +875,7 @@ exports.plugin = {
 						DateReport,
 						MarkType,
 						DateMark_At AS DateMark,
+						caseDetection.DateCreate_At AS DateCreate,
 						Direction,
 						Lane,
 						ImgZoomIn,
@@ -898,7 +899,7 @@ exports.plugin = {
 					LIMIT ? OFFSET ?`,
 					[ String(pageSize), String(offset) ]
 				);
-				
+				//console.log(res_caseList);
 				res_caseList.forEach(caseSpec => {
 					const [lat, lng] = [ Math.min(...caseSpec.CenterPt.coordinates), Math.max(...caseSpec.CenterPt.coordinates) ];
 					delete caseSpec.CenterPt;
@@ -1278,21 +1279,7 @@ exports.plugin = {
 							AND DistressType IN (15, 29, 16, 32, 18, 51, 50, 53, 65, 54, 55, 56, 49, 66, 58)`,
 							[ res_inspectionList.map(l => l.InspectId) ]
 					)
-					console.log(`SELECT 
-							DateCollect_At AS dateCollect, 
-							REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( REPLACE ( DistressType, '15', '坑洞' ), '29', '縱橫裂縫'), '16', '龜裂'), '32', '車轍'), '18', '隆起與凹陷'), '51', '薄層剝離'), '50', '塊狀裂縫'), '53', "推擠"), '65', '補綻及管線回填'), '54', '冒油'), '55', '波浪狀鋪面'), '56', '車道與路肩分離'), '49', '滑溜裂縫'), '66', '骨材剝落'), '58', '人孔高差') AS distressType, 
-							REPLACE ( REPLACE ( REPLACE ( DistressLevel, '1', '輕' ), '2', '中' ), '3', '重' ) AS distressLevel, 
-							ST_AsWKT(Geom, 'axis-order=long-lat') AS geom, 
-							ST_AsWKT(Wkb_geometry, 'axis-order=long-lat') AS wkb_geometry, 
-							id AS caseDetectionId
-						FROM  
-							caseDetection 
-							LEFT JOIN caseInspection USING(InspectId)
-						WHERE 
-							caseDetection.IsActive = 1 
-							AND caseDetection.DateMark_At IS NULL
-							AND InspectId IN (?) 
-							AND DistressType IN (15, 29, 16, 32, 18, 51, 50, 53, 65, 54, 55, 56, 49, 66, 58)`);
+					// console.log(res_caseList);
 
 					// Step4: 寫入distress
 					result.total = res_caseList.length;
@@ -1310,10 +1297,10 @@ exports.plugin = {
 
 					if (sqlCMD_list.length != 0) {
 						sqlCMD_list = sqlCMD_list.replace(/,$/, "");
-						console.log(sqlCMD_list);
+						// console.log(sqlCMD_list);
 
 						const result_pg = await request.pg.client.query(`INSERT INTO "qgis"."distress" ( "surveyId", "dateCollect", "distressType", "distressLevel", "geom", "wkb_geometry", "caseDetectionId") VALUES ${sqlCMD_list}`);
-						console.log(result_pg);
+						// console.log(result_pg);
 						result.success = result_pg.rowCount;
 					}
 				}
@@ -1684,7 +1671,7 @@ exports.plugin = {
 						roundStart: Joi.string().required().description('起始時間'),
 						roundEnd: Joi.string().required().description('結束時間')
 					}).error((err) => console.log(err))
-				},
+				}
 			},
 			handler: async function (request, h) {
 				const { surveyId, tenderId, title, round, roundStart, roundEnd } = request.payload;
@@ -1699,19 +1686,19 @@ exports.plugin = {
 					[surveyId]
 				);
 
+				/* 抓最新Survey Id*/
+				const [ newSurvey ] = await request.tendersql.pool.execute(`
+					SELECT COALESCE(MAX(id)+1, 1) as id FROM TendersSurvey where id < 10000 
+				`);
+				console.log("newSurvey = ",newSurvey);
+				//console.log("newSurvey.id=",newSurvey[0].id);
+
 				// 新增合約TendersSurvey
 				const [ newTendersSurvey ] = await request.tendersql.pool.execute(`
-					INSERT INTO TendersSurvey (tenderId, title, round, isShadow, roundStart, roundEnd, zipCode, actionId)
-					VALUES (?, ?, ?, 0, ?, ?, 0, 0)`,
-					[tenderId, title, round, roundStart, roundEnd]
-				);
-
-				// 抓最新Survey Id
-				const [[ newSurvey ]] = await request.tendersql.pool.execute(`
-					SELECT id FROM TendersSurvey ORDER BY id DESC LIMIT 1
-				`);
-
-				console.log(newSurvey);
+					INSERT INTO TendersSurvey (id, tenderId, title, round, isShadow, roundStart, roundEnd, zipCode, actionId)
+					VALUES (?, ?, ?, ?, 0, ?, ?, 0, 0)`,
+					[newSurvey[0].id, tenderId, title, round, roundStart, roundEnd]
+				);									
 
 				let result = { total: 0, success: 0 };
 
@@ -1743,7 +1730,7 @@ exports.plugin = {
 						`POINT (${item.CoordinateX}  ${item.CoordinateY})`, item.CoordinateX, item.CoordinateY, item.Place, item.Postal_vil, item.Direction, item.Lane, item.RoadType, item.DistressType, item.DistressLevel, 
 						item.DeviceType, item.RestoredType, item.DateCreate, item.DateUpload, item.DatePlan, item.DateAssign, item.DateMarking, item.DateClose, item.DateDeadline, item.ImgZoomIn,
 						item.ImgZoomOut, item.MillingDepth, item.MillingLength, item.MillingWidth, item.MillingFormula, item.MillingArea, item.Aggregate34, item.Aggregate38, item.IsPressing, item.Notes, 
-						item.TaskRealGroup, item.KitNotes, item.Content, item.DateCreate_At, item.DateUpdate_At, newSurvey.id, item.CaseDetectionId, item.CaseCenterId, newSuffix || 'A', item.SurveyIdPre]
+						item.TaskRealGroup, item.KitNotes, item.Content, item.DateCreate_At, item.DateUpdate_At, newSurvey[0].id, item.CaseDetectionId, item.CaseCenterId, newSuffix || 'A', item.SurveyIdPre]
 					);
 					result.success++;
 				});
