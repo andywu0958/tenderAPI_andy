@@ -3,6 +3,8 @@
 //process.env.NODE_ENV = 'production';
 
 const Hapi = require("@hapi/hapi");
+const fs = require("fs");
+const path = require("path");
 
 const dotenv = require("dotenv");
 const args = process.argv.slice(2);
@@ -20,7 +22,30 @@ const Boom = require("@hapi/boom");
 const Pack = require("./package");
 const H2o2 = require("@hapi/h2o2");
 
-const server = Hapi.server({
+// SSL/TLS 配置
+const sslOptions = {};
+const useHTTPS = process.env.USE_HTTPS === "true" || process.env.USE_HTTPS === "1";
+
+if (useHTTPS) {
+	try {
+		const certPath = process.env.SSL_CERT_PATH || "ssl/f48ed4d649a78b59.pem";
+		const keyPath = process.env.SSL_KEY_PATH || "ssl/generated-private-key.txt";
+		const caPath = process.env.SSL_CA_PATH || "ssl/gd_bundle-g2.crt";
+		
+		sslOptions.tls = {
+			cert: fs.readFileSync(path.resolve(certPath), 'utf8'),
+			key: fs.readFileSync(path.resolve(keyPath), 'utf8'),
+			ca: fs.readFileSync(path.resolve(caPath), 'utf8')
+		};
+		
+		console.log(`SSL/TLS enabled with certificate: ${certPath}`);
+	} catch (error) {
+		console.error("Failed to load SSL certificates:", error.message);
+		console.error("Falling back to HTTP only");
+	}
+}
+
+const serverOptions = {
 	port: process.env.PORT || 8080,
 	host: process.env.HOST || "0.0.0.0",
 	routes: { cors: true },
@@ -40,7 +65,14 @@ const server = Hapi.server({
 	debug: {
 		request: [process.env.DEBUG ? "error" : "false"],
 	},
-});
+};
+
+// 如果有 SSL 配置，加入 tls 選項
+if (sslOptions.tls) {
+	serverOptions.tls = sslOptions.tls;
+}
+
+const server = Hapi.server(serverOptions);
 
 server.ext("onRequest", function (request, h) {
     console.log(`[API Request] ${request.method.toUpperCase()} ${request.path}`);
